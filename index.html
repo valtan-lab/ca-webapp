@@ -163,8 +163,11 @@ select:focus,input:focus{outline:2px solid var(--accent); outline-offset:1px;}
 
 .preview-wrap{
   margin-top:14px; border:1px solid var(--border); border-radius:8px;
-  overflow:auto; max-height:340px; background:var(--surface);
+  overflow:auto; background:var(--surface);
+  height:min(600px, 62vh); min-height:180px; max-height:85vh;
+  resize:vertical;
 }
+.preview-hint{font-size:11.5px; color:var(--text-faint); margin-top:6px;}
 table.preview{border-collapse:collapse; font-size:12.5px; user-select:none;}
 table.preview td, table.preview th{
   border:1px solid var(--border); padding:5px 9px; white-space:nowrap;
@@ -321,6 +324,7 @@ footer a{color:inherit;}
     </div>
 
     <div class="preview-wrap"><table class="preview" id="previewTable"></table></div>
+    <div class="preview-hint">大きい範囲は、開始セルをクリック →Shiftキーを押しながら終了セルをクリックすると選びやすいです。表の右下角をドラッグすると表示を広げられます。</div>
     <div class="msg" id="rangeError"></div>
 
     <div class="row" style="margin-top:16px;">
@@ -697,6 +701,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     currentSheet: null,
     data: [],           // 現在表示中の2Dデータ
     sel: null,           // {r1,c1,r2,c2} 0-indexed inclusive
+    anchor: null,        // {r,c} 直近のクリック位置(Shift+クリックの起点)
     dragging: false,
     dragStart: null,
     caResult: null,
@@ -780,6 +785,7 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
   function loadSheetIntoState(name) {
     state.currentSheet = name;
     state.data = state.sheetData[name] || [];
+    state.anchor = null;
     renderSheetSelect();
     // 既定選択: シート全体(上限つき)
     const rMax = Math.min(state.data.length, MAX_PREVIEW_ROWS) - 1;
@@ -836,14 +842,28 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     }
     table.appendChild(tbody);
 
-    // ドラッグ選択
+    // ドラッグ選択 + Shift+クリックでの範囲拡張(Excelと同様の操作)
     let downCell = null;
     tbody.addEventListener("mousedown", (e) => {
       const td = e.target.closest("td[data-r]");
       if (!td) return;
       e.preventDefault();
-      downCell = { r: +td.dataset.r, c: +td.dataset.c };
-      state.sel = { r1: downCell.r, c1: downCell.c, r2: downCell.r, c2: downCell.c };
+      const r = +td.dataset.r, c = +td.dataset.c;
+
+      if (e.shiftKey && state.anchor) {
+        // Shift+クリック: 前回のクリック位置(アンカー)から今クリックしたセルまでを選択
+        state.sel = {
+          r1: Math.min(state.anchor.r, r), r2: Math.max(state.anchor.r, r),
+          c1: Math.min(state.anchor.c, c), c2: Math.max(state.anchor.c, c),
+        };
+        applySelectionHighlight();
+        syncRangeBox();
+        return; // ドラッグは開始しない(単発のクリックで完結)
+      }
+
+      downCell = { r, c };
+      state.anchor = { r, c };
+      state.sel = { r1: r, c1: c, r2: r, c2: c };
       applySelectionHighlight();
       state.dragging = true;
     });
@@ -895,12 +915,14 @@ if(xr(e,"index.xml"))throw new Error("Unsupported NUMBERS 09 file");throw new Er
     showError("rangeError", "");
     if (!parsed) { showError("rangeError", "範囲の形式が正しくありません。例: B2:E7"); return; }
     state.sel = parsed;
+    state.anchor = { r: parsed.r1, c: parsed.c1 };
     applySelectionHighlight();
   });
   document.getElementById("useColHeader").addEventListener("change", applySelectionHighlight);
   document.getElementById("useRowHeader").addEventListener("change", applySelectionHighlight);
   document.getElementById("clearSelBtn").addEventListener("click", () => {
     state.sel = null;
+    state.anchor = null;
     document.getElementById("rangeBox").value = "";
     applySelectionHighlight();
   });
