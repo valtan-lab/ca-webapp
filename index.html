@@ -98,6 +98,12 @@ body{
   text-wrap:balance;
 }
 .hero p{margin:0;color:var(--text-muted);font-size:14px;max-width:560px;}
+.data-req-note{
+  margin:10px 0 0; font-size:12.5px; color:var(--accent-ink);
+  background:var(--accent-bg); border:1px solid var(--border);
+  border-radius:8px; padding:8px 12px; max-width:560px; line-height:1.55;
+}
+.data-req-note strong{font-weight:800;}
 .badge{
   display:inline-flex; align-items:center; gap:6px;
   font-size:12px; font-weight:700; color:var(--accent-ink);
@@ -283,6 +289,7 @@ footer a{color:inherit;}
     <div>
       <h1>コレスポンデンス分析ツール</h1>
       <p>Excelファイルのクロス集計表からシンプルコレスポンデンス分析を実行し、バイプロットまで自動作成します。すべてこのページ内(ブラウザ)で計算され、データは外部に送信されません。</p>
+      <p class="data-req-note"><strong>ご注意:</strong> 入力は必ず<strong>実数(度数)</strong>のクロス集計表を使ってください。横%・縦%などあらかじめ割合(%)に変換した表を読み込むと、行・列の質量(重み)が正しく計算されず、点の配置・寄与率・カイ二乗などの結果がゆがんでしまいます。</p>
     </div>
     <span class="badge">● サンプルデータで表示中</span>
   </div>
